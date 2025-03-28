@@ -1,10 +1,17 @@
+[![Release](https://img.shields.io/github/v/release/robinhickmann/uniclip)](https://github.com/robinhickmann/uniclip/releases/latest)
+[![License](https://img.shields.io/github/license/robinhickmann/uniclip)](https://github.com/robinhickmann/uniclip/blob/main/LICENSE)
+
 # Uniclip - Universal Clipboard
 
-Apple users, did you know you could copy from one device and paste on the other? Wouldn't it be awesome if you could do that for non-Apple devices too?
+A simple and flexible universal clipboard for all platforms.
+Uniclip is licensed under the MIT license.
 
-Now you can, Apple device or not!
+You can run the server in the same binary, on your pc or a dedicated server.
 
-You don't even have to sign in like you need to on Apple devices. You don't have to install Go either!
+Some use cases include:
+- Shared VM host and guest clipboard
+- Shared clipboard for devices in your local network
+- Shared clipboards for temporary use
 
 ## Usage
 
@@ -27,8 +34,7 @@ Just enter what it says (`uniclip 192.168.86.24:51607`) on your other device wit
 You can even have multiple devices joined to the same clipboard (just run that same command on the new device).
 
 ```text
-Uniclip - Universal Clipboard
-With Uniclip, you can copy from one device and paste on another.
+uniclip -h
 
 Usage: uniclip [--secure/-s] [--debug/-d] [ <address> | --help/-h ]
 Examples:
@@ -41,35 +47,27 @@ Running just `uniclip` will start a new clipboard.
 It will also provide an address with which you can connect to the same clipboard with another device.
 ```
 
-*Note: The devices have to be on the same local network (eg. connected to the same WiFi) unless the device has a public IP with all ports routed to it. (use the public IP instead of what Uniclip prints in this case)*
+*Note: By default uniclip binds to all interfaces meaning you can use any networking setup to reach it. However, It's not recommended to open the uniclip server to the internet since there's no authentication. Use any type of vpn instead.*
 
 ## Installing
 
-### macOS
+### Linux
 
-```sh
-brew install quackduck/tap/uniclip
-```
-or
+Just grab a precompiled binary from [releases](https://github.com/quackduck/uniclip/releases)
 
-Get an executable from [releases](https://github.com/quackduck/uniclip/releases) and install to `/usr/bin/uniclip`
+*Install script coming soon*
 
-### GNU/Linux
+### Windows
 
-*Note: At least one of xsel, xclip or wayland is needed for Uniclip to work on GNU/Linux*
+Just grab a precompiled binary from [releases](https://github.com/quackduck/uniclip/releases)
 
-```sh
-brew install quackduck/tap/uniclip
-```
-or
+*Windows installer coming soon*
 
-Get an executable from [releases](https://github.com/quackduck/uniclip/releases) and install to `/usr/bin/uniclip`
+### MacOS
 
-#### Arch/Artix/Manjaro Linux:
-```sh
-yay -S uniclip # or paru -S uniclip
-```
-Thanks to [@CodeLongAndProsper90](https://github.com/CodeLongAndProsper90) for submitting Uniclip to the AUR!
+Just grab a precompiled binary from [releases](https://github.com/quackduck/uniclip/releases)
+
+*Might add brew in the future*
 
 ### Android
 
@@ -80,18 +78,24 @@ Then, install the Termux:API package from the command line (in Termux) using:
 ```sh
 pkg install termux-api
 ```
-### Windows
 
-Just grab a precompiled binary from [releases](https://github.com/quackduck/uniclip/releases)
+### iOS
+
+I cannot afford to make an iOS app for this silly little utility. Feel free to do so yourself. If you do, please let me know!
 
 ## Uninstalling
-Uninstalling Uniclip is very easy. If you used a package manager, use its uninstall feature. If not, just delete the Uniclip binary:
+Uninstalling Uniclip is very easy. If you used a package manager, use it's uninstall feature. If not, just delete the Uniclip binary:
 
-On macOS or GNU/Linux, delete `/usr/local/bin/uniclip`  
+On Linux or macOS, delete `/usr/local/bin/uniclip`  
 On Windows, delete it from where you installed it  
-On Termux, delete it from `$PREFIX/usr/bin/uniclip`
+On Android, delete it from `$PREFIX/usr/bin/uniclip`
 
 ## Any other business
-Have a question, idea or just want to share something? Head over to [Discussions](https://github.com/quackduck/uniclip/discussions)
+Have a question, idea, suggestion or bug report? Head over to [Issues](https://github.com/robinhickmann/uniclip/issues) and create one. Use appropriate tags if you can.
 
-Thanks to [@aaryanporwal](https://github.com/aaryanporwal) for the idea!
+Contributions are happily welcomed, all I ask is for you to use [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/).
+
+## Security
+If you believe you've found a security vulnerability that affects uniclip.
+
+Please do not post it publicly and instead, open the github [Security](https://github.com/robinhickmann/uniclip/security) tab. Then click the "Report a vulnerability" button.
