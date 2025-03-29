@@ -10,7 +10,6 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"io/ioutil"
 	"net"
@@ -19,101 +18,88 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
+	"flag"
+	"log/slog"
 
 	"golang.org/x/crypto/scrypt"
+	"golang.org/x/term"
 )
 
 var (
 	secondsBetweenChecksForClipChange = 1
-	helpMsg                           = `Uniclip - Universal Clipboard
-With Uniclip, you can copy from one device and paste on another.
-
-Usage: uniclip [--secure/-s] [--debug/-d] [ <address> | --help/-h ]
-Examples:
-   uniclip                                   # start a new clipboard
-   uniclip -p 6666                           # start a new clipboard on a set port number
-   uniclip 192.168.86.24:53701               # join the clipboard at 192.168.86.24:53701
-   uniclip -d                                # start a new clipboard with debug output
-   uniclip -d --secure 192.168.86.24:53701   # join the clipboard with debug output and enable encryption
-Running just ` + "`uniclip`" + ` will start a new clipboard.
-It will also provide an address with which you can connect to the same clipboard with another device.
-Refer to https://github.com/quackduck/uniclip for more information`
 	listOfClients  = make([]*bufio.Writer, 0)
 	localClipboard string
-	printDebugInfo = false
-	version        = "dev"
 	cryptoStrength = 16384
-	secure         = false
 	password       []byte
-	port           = 0
+
+	version        = "2.3.6"
+	printVersion   bool
+	verboseLogging bool
+	pullBased	   bool
+	copyOnPaste    bool
+	encryption     bool
+	jsonOutput     bool
+	targetAddress  string
+	listenAddress  string
+	serverPort     int
+	pullInterval   int
+	logger         *slog.Logger
 )
 
-// TODO: Add a way to reconnect (if computer goes to sleep)
+func init() {
+	flag.BoolVar(&printVersion, "version", false, "Prints the installed version")
+	flag.BoolVar(&verboseLogging, "verbose", false, "Enable verbose logging")
+	flag.BoolVar(&pullBased, "pull", false, "Change the Push-Based clipboard to a Pull-Based one")
+	flag.BoolVar(&copyOnPaste, "copy", false, "Change the Push-Based clipboard to a Copy-On-Paste one")
+	flag.BoolVar(&encryption, "encrypt", true, "Enable encryption on all connections")
+	flag.BoolVar(&jsonOutput, "json", false, "Enable json output for logging when verbose logging is enabled")
+	flag.StringVar(&targetAddress, "target", "", "The address of the clipboard server to join")
+	flag.StringVar(&listenAddress, "listen", "0.0.0.0", "Listen address excluding the port")
+	flag.IntVar(&serverPort, "port", 38551, "server port")
+	flag.IntVar(&pullInterval, "interval", 1, "Pull interval in seconds if Pull-Based clipboard is enabled")
+}
+
 func main() {
-	if len(os.Args) > 4 {
-		handleError(errors.New("too many arguments"))
-		fmt.Println(helpMsg)
+	flag.Parse()
+
+	if printVersion {
+		fmt.Printf("uniclip %s %s/%s\n", version, runtime.GOOS, runtime.GOARCH)
 		return
 	}
-	if hasOption, _ := argsHaveOption("help", "h"); hasOption {
-		fmt.Println(helpMsg)
+
+	logger = slog.New(slog.DiscardHandler)
+	if verboseLogging {
+		logger = slog.Default()
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+
+		if jsonOutput {
+			logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+		}
+	}
+
+	if targetAddress != "" {
+		ConnectToServer(targetAddress)
 		return
 	}
-	if hasOption, i := argsHaveOption("debug", "d"); hasOption {
-		printDebugInfo = true
-		os.Args = removeElemFromSlice(os.Args, i) // delete the debug option and run again
-		main()
+
+	if serverPort > 65535 || serverPort < 1 {
+		fmt.Println("Invalid port number:", serverPort)
 		return
 	}
-	// --secure encrypts your data
-	if hasOption, i := argsHaveOption("secure", "s"); hasOption {
-		secure = true
-		os.Args = removeElemFromSlice(os.Args, i) // delete the secure option and run again
-		fmt.Print("Password for --secure: ")
-		password, _ = terminal.ReadPassword(int(syscall.Stdin))
+
+	if encryption {
+		fmt.Print("Password for -encrypt: ")
+		password, _ = term.ReadPassword(int(os.Stdin.Fd()))
 		fmt.Println()
-		main()
-		return
 	}
-	if hasOption, i := argsHaveOption("port", "p"); hasOption {
-		os.Args = removeElemFromSlice(os.Args, i) // delete the port option
-		if port > 0 {
-			fmt.Fprintln(os.Stderr, "Only one port number allowed")
-			os.Exit(1)
-		}
-		if len(os.Args) < i+1 {
-			fmt.Fprintln(os.Stderr, "Missing port number")
-			os.Exit(1)
-		}
-		requestedPort, err := strconv.Atoi(os.Args[i])
-		if err != nil || requestedPort < 1 || requestedPort > 65534 {
-			fmt.Fprintln(os.Stderr, "Invalid port number")
-			os.Exit(1)
-		}
-		os.Args = removeElemFromSlice(os.Args, i) // delete the port argument and run again
-		port = requestedPort
-		main()
-		return
-	}
-	if hasOption, _ := argsHaveOption("version", "v"); hasOption {
-		fmt.Println(version)
-		return
-	}
-	if len(os.Args) == 2 { // has exactly one argument
-		ConnectToServer(os.Args[1])
-		return
-	}
+
 	makeServer()
 }
 
 func makeServer() {
 	fmt.Println("Starting a new clipboard")
-	listenPortString := ":"
-	if port > 0 {
-		listenPortString = ":" + strconv.Itoa(port)
-	}
+	listenPortString := ":" + strconv.Itoa(serverPort)
 	l, err := net.Listen("tcp4", listenPortString) //nolint // complains about binding to all interfaces
 	if err != nil {
 		handleError(err)
@@ -121,7 +107,7 @@ func makeServer() {
 	}
 	defer l.Close()
 	port := strconv.Itoa(l.Addr().(*net.TCPAddr).Port)
-	fmt.Println("Run", "`uniclip", getOutboundIP().String()+":"+port+"`", "to join this clipboard")
+	fmt.Println("Run", "`uniclip -target", getOutboundIP().String()+":"+port+"`", "to join this clipboard")
 	fmt.Println()
 	for {
 		c, err := l.Accept()
@@ -165,7 +151,7 @@ func ConnectToServer(address string) {
 func MonitorLocalClip(w *bufio.Writer) {
 	for {
 		localClipboard = getLocalClip()
-		//debug("clipboard changed so sending it. localClipboard =", localClipboard)
+		//logger.Debug("clipboard changed so sending it. localClipboard =", localClipboard)
 		err := sendClipboard(w, localClipboard)
 		if err != nil {
 			handleError(err)
@@ -192,7 +178,7 @@ func MonitorSentClips(r *bufio.Reader) {
 		}
 
 		// decrypt if needed
-		if secure {
+		if encryption {
 			foreignClipboardBytes, err = decrypt(password, foreignClipboardBytes)
 			if err != nil {
 				handleError(err)
@@ -208,7 +194,7 @@ func MonitorSentClips(r *bufio.Reader) {
 		//foreignClipboard = decompress(foreignClipboardBytes)
 		setLocalClip(foreignClipboard)
 		localClipboard = foreignClipboard
-		debug("rcvd:", foreignClipboard)
+		logger.Debug("rcvd:", foreignClipboard)
 		for i := range listOfClients {
 			if listOfClients[i] != nil {
 				err = sendClipboard(listOfClients[i], foreignClipboard)
@@ -228,7 +214,7 @@ func sendClipboard(w *bufio.Writer, clipboard string) error {
 	clipboardBytes = []byte(clipboard)
 	//clipboardBytes = compress(clipboard)
 	//fmt.Printf("cmpr: %x\ndcmp: %x\nstr: %s\n\ncmpr better by %d\n", clipboardBytes, []byte(clipboard), clipboard, len(clipboardBytes)-len(clipboard))
-	if secure {
+	if encryption {
 		clipboardBytes, err = encrypt(password, clipboardBytes)
 		if err != nil {
 			return err
@@ -239,9 +225,9 @@ func sendClipboard(w *bufio.Writer, clipboard string) error {
 	if err != nil {
 		return err
 	}
-	debug("sent:", clipboard)
+	logger.Debug("sent:", clipboard)
 	//if secure {
-	//	debug("--secure is enabled, so actually sent as:", hex.EncodeToString(clipboardBytes))
+	//	logger.Debug("--secure is enabled, so actually sent as:", hex.EncodeToString(clipboardBytes))
 	//}
 	return w.Flush()
 }
@@ -429,12 +415,6 @@ func handleError(err error) {
 		fmt.Println("Disconnected")
 	} else {
 		fmt.Fprintln(os.Stderr, "error: ["+err.Error()+"]")
-	}
-}
-
-func debug(a ...interface{}) {
-	if printDebugInfo {
-		fmt.Println("verbose:", a)
 	}
 }
 
