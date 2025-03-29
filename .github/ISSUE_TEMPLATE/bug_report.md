@@ -1,10 +1,9 @@
 ---
 name: Bug report
 about: Create a report to help improve Uniclip
-title: 'Bug: '
+title: "Bug: "
 labels: bug
-assignees: ''
-
+assignees: ""
 ---
 
 <!--You can remove parts which do not apply-->
