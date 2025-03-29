@@ -56,5 +56,6 @@ jobs:
 
 permissions:
   contents: read
+  pull-request: read
+  actions: read
   security-events: write
-  actions: write
