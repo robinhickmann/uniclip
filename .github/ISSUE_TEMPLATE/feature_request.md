@@ -1,10 +1,9 @@
 ---
 name: Feature request
 about: Suggest an idea for Uniclip
-title: 'Feature: '
+title: "Feature: "
 labels: enhancement
-assignees: ''
-
+assignees: ""
 ---
 
 <!--You can remove parts which do not apply-->

@@ -2,16 +2,15 @@ package main
 
 import (
 	"bufio"
-	"bytes"
-	"compress/flate"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/gob"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"log/slog"
 	"net"
 	"os"
 	"os/exec"
@@ -19,8 +18,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"flag"
-	"log/slog"
+
+	// "io/ioutil"
+	// "bytes"
+	// "compress/flate"
 
 	"golang.org/x/crypto/scrypt"
 	"golang.org/x/term"
@@ -28,15 +29,15 @@ import (
 
 var (
 	secondsBetweenChecksForClipChange = 1
-	listOfClients  = make([]*bufio.Writer, 0)
-	localClipboard string
-	cryptoStrength = 16384
-	password       []byte
+	listOfClients                     = make([]*bufio.Writer, 0)
+	localClipboard                    string
+	cryptoStrength                    = 16384
+	password                          []byte
 
 	version        = "2.3.6"
 	printVersion   bool
 	verboseLogging bool
-	pullBased	   bool
+	pullBased      bool
 	copyOnPaste    bool
 	encryption     bool
 	jsonOutput     bool
@@ -90,7 +91,14 @@ func main() {
 
 	if encryption {
 		fmt.Print("Password for -encrypt: ")
-		password, _ = term.ReadPassword(int(os.Stdin.Fd()))
+		var err error
+
+		password, err = term.ReadPassword(int(os.Stdin.Fd()))
+		if err != nil {
+			fmt.Println("Error reading password:", err)
+			return
+		}
+
 		fmt.Println()
 	}
 
@@ -151,7 +159,7 @@ func ConnectToServer(address string) {
 func MonitorLocalClip(w *bufio.Writer) {
 	for {
 		localClipboard = getLocalClip()
-		//logger.Debug("clipboard changed so sending it. localClipboard =", localClipboard)
+		// logger.Debug("clipboard changed so sending it. localClipboard =", localClipboard)
 		err := sendClipboard(w, localClipboard)
 		if err != nil {
 			handleError(err)
@@ -191,10 +199,10 @@ func MonitorSentClips(r *bufio.Reader) {
 		if foreignClipboard == "" {
 			continue
 		}
-		//foreignClipboard = decompress(foreignClipboardBytes)
+		// foreignClipboard = decompress(foreignClipboardBytes)
 		setLocalClip(foreignClipboard)
 		localClipboard = foreignClipboard
-		logger.Debug("rcvd:", foreignClipboard)
+		logger.Debug("rcvd:", "foreignClipboard", foreignClipboard)
 		for i := range listOfClients {
 			if listOfClients[i] != nil {
 				err = sendClipboard(listOfClients[i], foreignClipboard)
@@ -212,8 +220,8 @@ func sendClipboard(w *bufio.Writer, clipboard string) error {
 	var clipboardBytes []byte
 	var err error
 	clipboardBytes = []byte(clipboard)
-	//clipboardBytes = compress(clipboard)
-	//fmt.Printf("cmpr: %x\ndcmp: %x\nstr: %s\n\ncmpr better by %d\n", clipboardBytes, []byte(clipboard), clipboard, len(clipboardBytes)-len(clipboard))
+	// clipboardBytes = compress(clipboard)
+	// fmt.Printf("cmpr: %x\ndcmp: %x\nstr: %s\n\ncmpr better by %d\n", clipboardBytes, []byte(clipboard), clipboard, len(clipboardBytes)-len(clipboard))
 	if encryption {
 		clipboardBytes, err = encrypt(password, clipboardBytes)
 		if err != nil {
@@ -225,10 +233,10 @@ func sendClipboard(w *bufio.Writer, clipboard string) error {
 	if err != nil {
 		return err
 	}
-	logger.Debug("sent:", clipboard)
-	//if secure {
-	//	logger.Debug("--secure is enabled, so actually sent as:", hex.EncodeToString(clipboardBytes))
-	//}
+	logger.Debug("sent:", "clipboard", clipboard)
+	// if secure {
+	// 	logger.Debug("--secure is enabled, so actually sent as:", hex.EncodeToString(clipboardBytes))
+	// }
 	return w.Flush()
 }
 
@@ -291,26 +299,26 @@ func deriveKey(password, salt []byte) ([]byte, []byte, error) {
 	return key, salt, nil
 }
 
-func compress(str string) []byte {
-	var buf bytes.Buffer
-	zw, _ := flate.NewWriter(&buf, -1)
-	_, _ = zw.Write([]byte(str))
-	_ = zw.Close()
-	return buf.Bytes()
-}
+// func compress(str string) []byte {
+// 	var buf bytes.Buffer
+// 	zw, _ := flate.NewWriter(&buf, -1)
+// 	_, _ = zw.Write([]byte(str))
+// 	_ = zw.Close()
+// 	return buf.Bytes()
+// }
 
-func decompress(b []byte) string {
-	var buf bytes.Buffer
-	_, _ = buf.Write(b)
-	zr := flate.NewReader(&buf)
-	decompressed, err := ioutil.ReadAll(zr)
-	if err != nil {
-		handleError(err)
-		return "Issues while decompressing clipboard"
-	}
-	_ = zr.Close()
-	return string(decompressed)
-}
+// func decompress(b []byte) string {
+// 	var buf bytes.Buffer
+// 	_, _ = buf.Write(b)
+// 	zr := flate.NewReader(&buf)
+// 	decompressed, err := ioutil.ReadAll(zr)
+// 	if err != nil {
+// 		handleError(err)
+// 		return "Issues while decompressing clipboard"
+// 	}
+// 	_ = zr.Close()
+// 	return string(decompressed)
+// }
 
 func runGetClipCommand() string {
 	var out []byte
@@ -348,9 +356,9 @@ func runGetClipCommand() string {
 
 func getLocalClip() string {
 	str := runGetClipCommand()
-	//for ; str == ""; str = runGetClipCommand() { // wait until it's not empty
-	//	time.Sleep(time.Millisecond * 100)
-	//}
+	// for ; str == ""; str = runGetClipCommand() { // wait until it's not empty
+	// 	time.Sleep(time.Millisecond * 100)
+	// }
 	return str
 }
 
@@ -418,23 +426,23 @@ func handleError(err error) {
 	}
 }
 
-func argsHaveOption(long string, short string) (hasOption bool, foundAt int) {
-	for i, arg := range os.Args {
-		if arg == "--"+long || arg == "-"+short {
-			return true, i
-		}
-	}
-	return false, 0
-}
+// func argsHaveOption(long string, short string) (hasOption bool, foundAt int) {
+// 	for i, arg := range os.Args {
+// 		if arg == "--"+long || arg == "-"+short {
+// 			return true, i
+// 		}
+// 	}
+// 	return false, 0
+// }
 
 // keep order
-func removeElemFromSlice(slice []string, i int) []string {
-	return append(slice[:i], slice[i+1:]...)
-}
+// func removeElemFromSlice(slice []string, i int) []string {
+// 	return append(slice[:i], slice[i+1:]...)
+// }
 
 func checkError(err error) error {
-    if err != nil {
-        return err
-    }
-    return nil
+	if err != nil {
+		return err
+	}
+	return nil
 }

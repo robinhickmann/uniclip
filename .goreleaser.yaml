@@ -41,7 +41,7 @@ archives:
           - zip
 
 checksum:
-  name_template: 'sha256-checksums.txt'
+  name_template: "sha256-checksums.txt"
 
 changelog:
   sort: asc
