@@ -1,6 +1,12 @@
-*.DS_Store
+# IDEs
 .vscode
-__debug_bin
-/uniclip
 .idea
-/dist
+
+# Misc
+*.DS_Store
+
+# Go releaser
+dist/
+
+# Go build
+uniclip

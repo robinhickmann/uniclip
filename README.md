@@ -1,7 +1,4 @@
-[![Release](https://img.shields.io/github/v/release/robinhickmann/uniclip)](https://github.com/robinhickmann/uniclip/releases/latest)
-[![License](https://img.shields.io/github/license/robinhickmann/uniclip)](https://github.com/robinhickmann/uniclip/blob/main/LICENSE)
-
-# Uniclip - Universal Clipboard
+# Uniclip - Universal Clipboard [![Release](https://img.shields.io/github/v/release/robinhickmann/uniclip)](https://github.com/robinhickmann/uniclip/releases/latest) [![License](https://img.shields.io/github/license/robinhickmann/uniclip)](https://github.com/robinhickmann/uniclip/blob/main/LICENSE)
 
 A simple and flexible universal clipboard for all platforms.
 Uniclip is licensed under the MIT license.
@@ -74,10 +71,12 @@ Just grab a precompiled binary from [releases](https://github.com/quackduck/unic
 Get an executable from [releases](https://github.com/quackduck/uniclip/releases) and install to `$PREFIX/usr/bin/uniclip`
 
 Install the Termux app and Termux:API app from the Play Store.
-Then, install the Termux:API package from the command line (in Termux) using:
+Then, install the Termux:API package from the command-line (in Termux) using:
 ```sh
 pkg install termux-api
 ```
+
+*Might add apk file in the future*
 
 ### iOS
 
@@ -98,4 +97,4 @@ Contributions are happily welcomed, all I ask is for you to use [conventional co
 ## Security
 If you believe you've found a security vulnerability that affects uniclip.
 
-Please do not post it publicly and instead, open the github [Security](https://github.com/robinhickmann/uniclip/security) tab. Then click the "Report a vulnerability" button.
+Please do not post it publicly and instead, open the GitHub [Security](https://github.com/robinhickmann/uniclip/security) tab. Then click the "Report a vulnerability" button.

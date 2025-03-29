@@ -262,11 +262,11 @@ func decrypt(key, data []byte) ([]byte, error) {
 		return nil, err
 	}
 	blockCipher, err := aes.NewCipher(key)
-	if err != nil {
+	if err := checkError(err); err != nil {
 		return nil, err
 	}
 	gcm, err := cipher.NewGCM(blockCipher)
-	if err != nil {
+	if err := checkError(err); err != nil {
 		return nil, err
 	}
 	nonce, ciphertext := data[:gcm.NonceSize()], data[gcm.NonceSize():]
@@ -430,4 +430,11 @@ func argsHaveOption(long string, short string) (hasOption bool, foundAt int) {
 // keep order
 func removeElemFromSlice(slice []string, i int) []string {
 	return append(slice[:i], slice[i+1:]...)
+}
+
+func checkError(err error) error {
+    if err != nil {
+        return err
+    }
+    return nil
 }

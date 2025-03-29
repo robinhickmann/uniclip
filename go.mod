@@ -1,6 +1,6 @@
 module github.com/robinhickmann/uniclip
 
-go 1.24.1
+go 1.23
 
 require (
 	golang.org/x/crypto v0.36.0
